@@ -122,8 +122,15 @@ public class Rendering {
         results.clear();
         namedResults.clear();
         for (TrackedResult tr : newTrackedResults) {
-            results.put(tr.result().pos(), tr.result());
-            if (tr.result().name() != null) namedResults.put(tr.result().pos(), tr.result());
+            SearchResult r = tr.result();
+            results.put(r.pos(), r);
+            // Retain the first non-null name per position. A container may match multiple
+            // tracked items (e.g. a shulker containing both a diamond and an emerald),
+            // and without this guard the second iteration would overwrite the first name,
+            // potentially clearing the label if the later result has name == null.
+            if (r.name() != null && !namedResults.containsKey(r.pos())) {
+                namedResults.put(r.pos(), r);
+            }
         }
     }
 
@@ -307,9 +314,14 @@ public class Rendering {
         var builder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
 
         if (trackingActive && !trackedResults.isEmpty()) {
-            // Multi-item tracking mode: each item gets its own colour with sine-wave alpha pulsing
+            // Multi-item tracking mode: each item gets its own colour with sine-wave alpha pulsing.
+            // Deduplicate positions per frame: if a container matches multiple tracked items
+            // (e.g. a shulker containing both a diamond and an emerald), each TrackedResult
+            // would emit the same box. Without deduplication the overlapping translucent boxes
+            // cause flickering and darkening due to repeated alpha blending.
             float time = (getTicksSinceSearch() + partialTick) * 0.05f;
             float alphaBase = 0.5f + 0.5f * Mth.sin(time * 2.0f);
+            java.util.Set<BlockPos> emitted = new java.util.HashSet<>();
 
             for (TrackedResult tr : trackedResults) {
                 int color = red.jackf.whereisit.client.tracking.TrackingState.getTrackedColor(tr.trackedItem());
@@ -318,9 +330,14 @@ public class Rendering {
                 int b = FastColor.ARGB32.blue(color);
                 int a = (int) (alphaBase * 255);
 
-                emitBoxVertices(tr.result().pos(), builder, 1.0f, r, g, b, a);
+                BlockPos pos = tr.result().pos();
+                if (emitted.add(pos)) {
+                    emitBoxVertices(pos, builder, 1.0f, r, g, b, a);
+                }
                 for (BlockPos otherPos : tr.result().otherPositions()) {
-                    emitBoxVertices(otherPos, builder, 1.0f, r, g, b, a);
+                    if (emitted.add(otherPos)) {
+                        emitBoxVertices(otherPos, builder, 1.0f, r, g, b, a);
+                    }
                 }
             }
         } else if (!results.isEmpty()) {
