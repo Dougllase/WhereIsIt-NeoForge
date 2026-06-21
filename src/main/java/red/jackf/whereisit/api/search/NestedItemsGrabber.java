@@ -2,8 +2,7 @@ package red.jackf.whereisit.api.search;
 
 
 import com.google.common.collect.Lists;
-import net.fabricmc.fabric.api.event.Event;
-import net.fabricmc.fabric.api.event.EventFactory;
+import red.jackf.whereisit.api.events.SimpleEvent;
 import net.minecraft.world.item.ItemStack;
 import red.jackf.whereisit.api.EventPhases;
 
@@ -25,7 +24,7 @@ public interface NestedItemsGrabber {
         return EVENT.invoker().grab(source);
     }
 
-    Event<NestedItemsGrabber> EVENT = EventFactory.createWithPhases(NestedItemsGrabber.class, listeners -> stack -> {
+    SimpleEvent<NestedItemsGrabber> EVENT = SimpleEvent.createWithPhases(NestedItemsGrabber.class, listeners -> stack -> {
         List<ItemStack> result = Lists.newArrayList();
 
         for (NestedItemsGrabber listener : listeners) {

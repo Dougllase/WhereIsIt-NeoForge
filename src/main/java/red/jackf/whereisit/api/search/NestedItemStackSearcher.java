@@ -1,7 +1,6 @@
 package red.jackf.whereisit.api.search;
 
-import net.fabricmc.fabric.api.event.Event;
-import net.fabricmc.fabric.api.event.EventFactory;
+import red.jackf.whereisit.api.events.SimpleEvent;
 import net.minecraft.world.item.ItemStack;
 
 import java.util.function.Predicate;
@@ -14,7 +13,7 @@ import java.util.function.Predicate;
  */
 @Deprecated(forRemoval = true, since = "2.6.0")
 public interface NestedItemStackSearcher {
-    Event<NestedItemStackSearcher> EVENT = EventFactory.createArrayBacked(NestedItemStackSearcher.class, listeners -> (source, predicate) -> {
+    SimpleEvent<NestedItemStackSearcher> EVENT = SimpleEvent.createArrayBacked(NestedItemStackSearcher.class, listeners -> (source, predicate) -> {
         for (var listener : listeners)
             if (listener.check(source, predicate)) return true;
         return false;

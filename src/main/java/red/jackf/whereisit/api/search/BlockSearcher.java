@@ -1,7 +1,6 @@
 package red.jackf.whereisit.api.search;
 
-import net.fabricmc.fabric.api.event.Event;
-import net.fabricmc.fabric.api.event.EventFactory;
+import red.jackf.whereisit.api.events.SimpleEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
@@ -29,13 +28,13 @@ public interface BlockSearcher {
     /**
      * Called before the fallback transfer API handler. Use this for custom behaviors on blocks.
      */
-    ResourceLocation DEFAULT = Event.DEFAULT_PHASE;
+    ResourceLocation DEFAULT = SimpleEvent.DEFAULT_PHASE;
     /**
      * Used for the transfer API fallback. Not recommended for general use.
      */
     ResourceLocation FALLBACK = WhereIsIt.id("fallback");
 
-    Event<BlockSearcher> EVENT = EventFactory.createWithPhases(BlockSearcher.class, handlers -> ((request, player, level, state, pos) -> {
+    SimpleEvent<BlockSearcher> EVENT = SimpleEvent.createWithPhases(BlockSearcher.class, handlers -> ((request, player, level, state, pos) -> {
         for (BlockSearcher handler : handlers) {
             var result = handler.searchPosition(request, player, level, state, pos);
             if (result.shouldTerminate()) return result;

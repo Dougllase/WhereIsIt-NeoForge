@@ -1,7 +1,6 @@
 package red.jackf.whereisit.api.criteria;
 
 import com.mojang.serialization.Codec;
-import net.minecraft.core.Registry;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import red.jackf.whereisit.api.criteria.builtin.AnyOfCriterion;
@@ -10,7 +9,7 @@ import red.jackf.whereisit.api.criteria.builtin.AnyOfCriterion;
  * A test for an ItemStack. Register a supplier to {@link #register(ResourceLocation, CriterionType)}
  */
 public interface Criterion {
-    Codec<Criterion> CODEC = CriterionType.REGISTRY.byNameCodec()
+    Codec<Criterion> CODEC = CriterionType.byNameCodec()
             .dispatch("type", Criterion::type, CriterionType::codec);
 
     CriterionType<?> type();
@@ -44,6 +43,7 @@ public interface Criterion {
      * @param <T> Extended Criterion class
      */
     static <T extends Criterion> CriterionType<T> register(ResourceLocation id, CriterionType<T> type) {
-        return Registry.register(CriterionType.REGISTRY, id, type);
+        CriterionType.register(id, type);
+        return type;
     }
 }

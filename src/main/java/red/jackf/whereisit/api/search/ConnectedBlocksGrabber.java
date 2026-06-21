@@ -1,7 +1,6 @@
 package red.jackf.whereisit.api.search;
 
-import net.fabricmc.fabric.api.event.Event;
-import net.fabricmc.fabric.api.event.EventFactory;
+import red.jackf.whereisit.api.events.SimpleEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
@@ -16,7 +15,7 @@ import java.util.Set;
  * in the case of multi-block storages, such as double chests in vanilla.
  */
 public interface ConnectedBlocksGrabber {
-    Event<ConnectedBlocksGrabber> EVENT = EventFactory.createArrayBacked(ConnectedBlocksGrabber.class, handlers -> ((positions, pos, level, state) -> {
+    SimpleEvent<ConnectedBlocksGrabber> EVENT = SimpleEvent.createArrayBacked(ConnectedBlocksGrabber.class, handlers -> ((positions, pos, level, state) -> {
         for (ConnectedBlocksGrabber handler : handlers)
             handler.getConnected(positions, pos, level, state);
     }));

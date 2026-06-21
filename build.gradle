@@ -1,0 +1,128 @@
+plugins {
+    id 'java-library'
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.neoforged.moddev' version '2.0.141'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+// Mojang ships Java 21 to end users in 1.21.1, so mods should target Java 21.
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    mavenLocal()
+    // CN mirrors
+    maven { url = 'https://maven.aliyun.com/repository/public' }
+    maven { url = 'https://maven.aliyun.com/repository/central' }
+    // NeoForge / ModDevGradle artifacts
+    maven { url = 'https://maven.neoforged.net/releases' }
+
+    // YACL (Yet Another Config Lib)
+    maven {
+        name = 'XanderMaven'
+        url = 'https://maven.isxander.dev/releases'
+        content {
+            includeGroupAndSubgroups('dev.isxander')
+            includeGroupAndSubgroups('org.quiltmc')
+        }
+    }
+
+    mavenCentral()
+}
+
+neoForge {
+    // NeoForge version
+    version = project.neo_version
+
+    parchment {
+        minecraftVersion = project.parchment_minecraft_version
+        mappingsVersion = project.parchment_mappings_version
+    }
+
+    // Access Transformers
+    accessTransformers = project.files('src/main/resources/META-INF/accesstransformer.cfg')
+
+    runs {
+        client {
+            client()
+            programArguments.addAll '--username', 'Dev'
+        }
+
+        server {
+            server()
+            programArgument '--nogui'
+        }
+
+        configureEach {
+            systemProperty 'forge.logging.markers', 'REGISTRIES'
+            logLevel = org.slf4j.event.Level.DEBUG
+        }
+    }
+
+    mods {
+        "${mod_id}" {
+            sourceSet(sourceSets.main)
+        }
+    }
+}
+
+dependencies {
+    // YACL config library (NeoForge build)
+    implementation("dev.isxander:yet-another-config-lib:${project.yacl_version}")
+}
+
+// Expand replace properties in neoforge.mods.toml
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version      : minecraft_version,
+            minecraft_version_range: minecraft_version_range,
+            neo_version            : neo_version,
+            loader_version_range   : loader_version_range,
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_license            : mod_license,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_description        : mod_description,
+    ]
+    inputs.properties replaceProperties
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand replaceProperties
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+idea {
+    module {
+        downloadSources = true
+        downloadJavadoc = true
+    }
+}
+
+// Deploy task: copy built jar to the target mods folder
+tasks.register('deploy', Copy) {
+    group = 'build'
+    description = 'Build and deploy the mod jar to the target mods folder'
+
+    dependsOn tasks.named('build')
+
+    from(layout.buildDirectory.file("libs/${mod_id}-${mod_version}.jar"))
+    into('E:/thw/.minecraft/versions/MP1.21.1/mods')
+
+    doFirst {
+        println "Deploying ${mod_id}-${mod_version}.jar to E:/thw/.minecraft/versions/MP1.21.1/mods/"
+    }
+    doLast {
+        println "Deploy complete!"
+    }
+}

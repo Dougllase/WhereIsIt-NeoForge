@@ -84,7 +84,7 @@ public final class SearchResult {
      * @return Search result with other positions added
      */
     public SearchResult withOtherPositions(List<BlockPos> otherPositions) {
-        var copy = new SearchResult(pos, item, name, nameOffset, otherPositions);
+        var copy = new SearchResult(pos, item, name, nameOffset, this.otherPositions);
         copy.otherPositions.addAll(otherPositions);
         copy.otherPositions.remove(pos);
         return copy;

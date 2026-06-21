@@ -6,7 +6,6 @@ public class WhereIsItDefaultPlugin implements WhereIsItPlugin {
     @Override
     public void load() {
         BuiltInCriteria.setup();
-        DefaultBlockSearchers.setup();
         DefaultConnectedBlocksGrabbers.setup();
         DefaultNestedItemsGrabbers.setup();
 

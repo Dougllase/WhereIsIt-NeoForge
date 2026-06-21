@@ -3,7 +3,7 @@ package red.jackf.whereisit.config;
 import dev.isxander.yacl3.config.v2.api.ConfigClassHandler;
 import dev.isxander.yacl3.config.v2.api.SerialEntry;
 import dev.isxander.yacl3.config.v2.api.serializer.GsonConfigSerializerBuilder;
-import net.fabricmc.loader.api.FabricLoader;
+import net.neoforged.fml.loading.FMLPaths;
 import net.minecraft.util.Mth;
 import red.jackf.whereisit.WhereIsIt;
 
@@ -18,7 +18,7 @@ public class WhereIsItConfig {
             = ConfigClassHandler.createBuilder(WhereIsItConfig.class)
                 .id(WhereIsIt.id("config"))
             .serializer(config -> GsonConfigSerializerBuilder.create(config)
-                    .setPath(FabricLoader.getInstance().getConfigDir().resolve("whereisit.json5"))
+                    .setPath(FMLPaths.CONFIGDIR.get().resolve("whereisit.json5"))
                     .setJson5(true)
                     .build())
             .build();
@@ -117,7 +117,7 @@ public class WhereIsItConfig {
         public void validate() {
             this.slotHighlightMouseFactor = Mth.clamp(this.slotHighlightMouseFactor, 0f, 4f);
             this.slotHighlightXFactor = Mth.clamp(this.slotHighlightXFactor, 0f, 4f);
-            this.highlightTimeFactor = Mth.clamp(this.slotHighlightXFactor, 0.1f, 4f);
+            this.highlightTimeFactor = Mth.clamp(this.highlightTimeFactor, 0.1f, 4f);
             this.solidColour = new Color(this.solidColour.getRGB() | 0xFF_000000);
             this.containerNameLabelScale = Mth.clamp(this.containerNameLabelScale, 0.25f, 2f);
 
@@ -141,6 +141,21 @@ public class WhereIsItConfig {
         @SerialEntry(comment = "How long it takes world and slot highlights to fade out. Applies to both local regular highlights and server-side highlights.")
         public int fadeoutTimeTicks = 15 * TICKS_PER_SECOND;
 
+        @SerialEntry(comment = "Radius (in blocks) from the player within which the item browser lists recorded containers and tracking highlights them. In the range [16, 1024].")
+        public int trackingRangeBlocks = 128;
+
+        @SerialEntry(comment = "How often (in ticks) tracking mode re-scans nearby containers. Lower is more responsive, higher is better for performance. In the range [1, 40].")
+        public int trackingRefreshTicks = 5;
+
+        @SerialEntry(comment = "Maximum number of items that can be tracked simultaneously. In the range [1, 10].")
+        public int maxTrackedItems = 5;
+
+        @SerialEntry(comment = "Whether to show the tracking info HUD in the top-right corner.")
+        public boolean showTrackingHud = true;
+
+        @SerialEntry(comment = "Scale of the tracking HUD overlay. In the range [0.5, 2.0].")
+        public float trackingHudScale = 1.0f;
+
         @SerialEntry(comment = "Common debug options")
         public Debug debug = new Debug();
 
@@ -161,6 +176,10 @@ public class WhereIsItConfig {
         public void validate() {
             this.searchRangeBlocks = Mth.clamp(this.searchRangeBlocks, 4, 24);
             this.fadeoutTimeTicks = Mth.clamp(this.fadeoutTimeTicks, 5 * TICKS_PER_SECOND, 30 * TICKS_PER_SECOND);
+            this.trackingRangeBlocks = Mth.clamp(this.trackingRangeBlocks, 16, 1024);
+            this.trackingRefreshTicks = Mth.clamp(this.trackingRefreshTicks, 1, 40);
+            this.maxTrackedItems = Mth.clamp(this.maxTrackedItems, 1, 10);
+            this.trackingHudScale = Mth.clamp(this.trackingHudScale, 0.5f, 2.0f);
         }
     }
 

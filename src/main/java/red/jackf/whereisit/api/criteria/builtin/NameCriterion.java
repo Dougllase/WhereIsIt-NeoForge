@@ -16,7 +16,10 @@ import java.util.Optional;
  * Matches against the custom name of an ItemStack. If null, checks for lack of name. Looks for the whole name.
  */
 public record NameCriterion(@Nullable String name) implements Criterion {
-    public static final MapCodec<NameCriterion> CODEC = Codec.STRING.optionalFieldOf("name").xmap(opt -> new NameCriterion(opt.orElse(null)), name -> Optional.ofNullable(name.name));
+    public static final MapCodec<NameCriterion> CODEC = Codec.STRING.optionalFieldOf("name")
+            .xmap(opt -> new NameCriterion(opt.map(s -> s.toLowerCase(Locale.ROOT)).orElse(null)),
+                  n -> Optional.ofNullable(n.name))
+            .fieldOf("name");
     public static final CriterionType<NameCriterion> TYPE = CriterionType.of(CODEC);
 
     @Override
@@ -32,7 +35,7 @@ public record NameCriterion(@Nullable String name) implements Criterion {
         } else if (this.name == null) {
             return false;
         } else {
-            return customName.getString().toLowerCase(Locale.ROOT).contains(this.name.toLowerCase(Locale.ROOT));
+            return customName.getString().toLowerCase(Locale.ROOT).contains(this.name);
         }
     }
 }

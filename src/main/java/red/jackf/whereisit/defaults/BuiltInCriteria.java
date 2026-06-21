@@ -1,13 +1,12 @@
 package red.jackf.whereisit.defaults;
 
-import net.minecraft.core.Registry;
 import red.jackf.whereisit.WhereIsIt;
 import red.jackf.whereisit.api.criteria.CriterionType;
 import red.jackf.whereisit.api.criteria.builtin.*;
 
 public class BuiltInCriteria {
     private static void register(String path, CriterionType<?> type) {
-        Registry.register(CriterionType.REGISTRY, WhereIsIt.id(path), type);
+        CriterionType.register(WhereIsIt.id(path), type);
     }
 
     static void setup() {
