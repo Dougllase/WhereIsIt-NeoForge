@@ -138,14 +138,14 @@ public class WhereIsItClient {
                 Minecraft.getInstance().player.sendSystemMessage(component);
         }
 
-        var anySucceeded = SearchInvoker.EVENT.invoker().search(request, WhereIsItClient::recieveResults);
+        var anySucceeded = SearchInvoker.EVENT.invoker().search(request, WhereIsItClient::receiveResults);
 
         if (anySucceeded && WhereIsItConfig.INSTANCE.instance().getClient().playSoundOnRequest) playRequestSound();
 
         return anySucceeded;
     }
 
-    public static void recieveResults(Collection<SearchResult> results) {
+    public static void receiveResults(Collection<SearchResult> results) {
         WhereIsItClient.LOGGER.debug("Search results: %s".formatted(results));
         if (WhereIsItConfig.INSTANCE.instance().getClient().closeGuiOnFoundResults && !closedScreenThisSearch) {
             closedScreenThisSearch = true;
