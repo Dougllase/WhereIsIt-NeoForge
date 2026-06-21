@@ -173,20 +173,34 @@ public class Rendering {
 
             // Check if we're in multi-item tracking mode
             if (trackingActive && !trackedResults.isEmpty()) {
-                // Multi-item tracking: colour each slot by its tracked item
-                for (Slot slot : containerScreen.getMenu().slots) {
-                    if (!slot.isActive() || !slot.hasItem()) continue;
-                    for (TrackedResult tr : trackedResults) {
-                        if (SearchRequest.check(slot.getItem(), red.jackf.whereisit.client.tracking.TrackingState.getTrackedRequest(tr.trackedItem()))) {
-                            int color = red.jackf.whereisit.client.tracking.TrackingState.getTrackedColor(tr.trackedItem());
-                            // Apply pulsing alpha
-                            float alphaBase = 0.5f + 0.5f * Mth.sin((getTicksSinceSearch() + tickDelta) * 0.1f);
-                            int a = (int) (alphaBase * 255);
-                            int highlightColor = (a << 24) | (color & 0x00FFFFFF);
-                            var x = slot.x + containerScreen.leftPos;
-                            var y = slot.y + containerScreen.topPos;
-                            graphics.fill(x, y, x + 16, y + 16, highlightColor);
-                            break;
+                // Multi-item tracking: colour each slot by its tracked item.
+                //
+                // Previously this iterated `trackedResults` (one entry per matched container, often dozens),
+                // calling SearchRequest.check() once per (slot, container) pair plus its nested-search cost.
+                // With N slots and M matched containers, that is O(N*M*nestedSearch) every frame.
+                //
+                // Each (request, colour) pair is identical for every container with the same tracked item, so
+                // we only need to check each tracked Item once per slot. Snapshot the (item -> request/colour)
+                // table to the local set of currently tracked items (bounded by maxTrackedItems, typically <=8).
+                java.util.List<net.minecraft.world.item.Item> trackedItems =
+                        red.jackf.whereisit.client.tracking.TrackingState.getTrackedItems();
+                if (!trackedItems.isEmpty()) {
+                    float alphaBase = 0.5f + 0.5f * Mth.sin((getTicksSinceSearch() + tickDelta) * 0.1f);
+                    int a = (int) (alphaBase * 255);
+                    for (Slot slot : containerScreen.getMenu().slots) {
+                        if (!slot.isActive() || !slot.hasItem()) continue;
+                        ItemStack slotStack = slot.getItem();
+                        for (net.minecraft.world.item.Item trackedItem : trackedItems) {
+                            SearchRequest req = red.jackf.whereisit.client.tracking.TrackingState.getTrackedRequest(trackedItem);
+                            if (req == null) continue;
+                            if (SearchRequest.check(slotStack, req)) {
+                                int color = red.jackf.whereisit.client.tracking.TrackingState.getTrackedColor(trackedItem);
+                                int highlightColor = (a << 24) | (color & 0x00FFFFFF);
+                                var x = slot.x + containerScreen.leftPos;
+                                var y = slot.y + containerScreen.topPos;
+                                graphics.fill(x, y, x + 16, y + 16, highlightColor);
+                                break;
+                            }
                         }
                     }
                 }
