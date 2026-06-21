@@ -122,8 +122,15 @@ public class Rendering {
         results.clear();
         namedResults.clear();
         for (TrackedResult tr : newTrackedResults) {
-            results.put(tr.result().pos(), tr.result());
-            if (tr.result().name() != null) namedResults.put(tr.result().pos(), tr.result());
+            SearchResult r = tr.result();
+            results.put(r.pos(), r);
+            // Retain the first non-null name per position. A container may match multiple
+            // tracked items (e.g. a shulker containing both a diamond and an emerald),
+            // and without this guard the second iteration would overwrite the first name,
+            // potentially clearing the label if the later result has name == null.
+            if (r.name() != null && !namedResults.containsKey(r.pos())) {
+                namedResults.put(r.pos(), r);
+            }
         }
     }
 
@@ -173,20 +180,34 @@ public class Rendering {
 
             // Check if we're in multi-item tracking mode
             if (trackingActive && !trackedResults.isEmpty()) {
-                // Multi-item tracking: colour each slot by its tracked item
-                for (Slot slot : containerScreen.getMenu().slots) {
-                    if (!slot.isActive() || !slot.hasItem()) continue;
-                    for (TrackedResult tr : trackedResults) {
-                        if (SearchRequest.check(slot.getItem(), red.jackf.whereisit.client.tracking.TrackingState.getTrackedRequest(tr.trackedItem()))) {
-                            int color = red.jackf.whereisit.client.tracking.TrackingState.getTrackedColor(tr.trackedItem());
-                            // Apply pulsing alpha
-                            float alphaBase = 0.5f + 0.5f * Mth.sin((getTicksSinceSearch() + tickDelta) * 0.1f);
-                            int a = (int) (alphaBase * 255);
-                            int highlightColor = (a << 24) | (color & 0x00FFFFFF);
-                            var x = slot.x + containerScreen.leftPos;
-                            var y = slot.y + containerScreen.topPos;
-                            graphics.fill(x, y, x + 16, y + 16, highlightColor);
-                            break;
+                // Multi-item tracking: colour each slot by its tracked item.
+                //
+                // Previously this iterated `trackedResults` (one entry per matched container, often dozens),
+                // calling SearchRequest.check() once per (slot, container) pair plus its nested-search cost.
+                // With N slots and M matched containers, that is O(N*M*nestedSearch) every frame.
+                //
+                // Each (request, colour) pair is identical for every container with the same tracked item, so
+                // we only need to check each tracked Item once per slot. Snapshot the (item -> request/colour)
+                // table to the local set of currently tracked items (bounded by maxTrackedItems, typically <=8).
+                java.util.List<net.minecraft.world.item.Item> trackedItems =
+                        red.jackf.whereisit.client.tracking.TrackingState.getTrackedItems();
+                if (!trackedItems.isEmpty()) {
+                    float alphaBase = 0.5f + 0.5f * Mth.sin((getTicksSinceSearch() + tickDelta) * 0.1f);
+                    int a = (int) (alphaBase * 255);
+                    for (Slot slot : containerScreen.getMenu().slots) {
+                        if (!slot.isActive() || !slot.hasItem()) continue;
+                        ItemStack slotStack = slot.getItem();
+                        for (net.minecraft.world.item.Item trackedItem : trackedItems) {
+                            SearchRequest req = red.jackf.whereisit.client.tracking.TrackingState.getTrackedRequest(trackedItem);
+                            if (req == null) continue;
+                            if (SearchRequest.check(slotStack, req)) {
+                                int color = red.jackf.whereisit.client.tracking.TrackingState.getTrackedColor(trackedItem);
+                                int highlightColor = (a << 24) | (color & 0x00FFFFFF);
+                                var x = slot.x + containerScreen.leftPos;
+                                var y = slot.y + containerScreen.topPos;
+                                graphics.fill(x, y, x + 16, y + 16, highlightColor);
+                                break;
+                            }
                         }
                     }
                 }
@@ -293,9 +314,14 @@ public class Rendering {
         var builder = tesselator.begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_COLOR);
 
         if (trackingActive && !trackedResults.isEmpty()) {
-            // Multi-item tracking mode: each item gets its own colour with sine-wave alpha pulsing
+            // Multi-item tracking mode: each item gets its own colour with sine-wave alpha pulsing.
+            // Deduplicate positions per frame: if a container matches multiple tracked items
+            // (e.g. a shulker containing both a diamond and an emerald), each TrackedResult
+            // would emit the same box. Without deduplication the overlapping translucent boxes
+            // cause flickering and darkening due to repeated alpha blending.
             float time = (getTicksSinceSearch() + partialTick) * 0.05f;
             float alphaBase = 0.5f + 0.5f * Mth.sin(time * 2.0f);
+            java.util.Set<BlockPos> emitted = new java.util.HashSet<>();
 
             for (TrackedResult tr : trackedResults) {
                 int color = red.jackf.whereisit.client.tracking.TrackingState.getTrackedColor(tr.trackedItem());
@@ -304,9 +330,14 @@ public class Rendering {
                 int b = FastColor.ARGB32.blue(color);
                 int a = (int) (alphaBase * 255);
 
-                emitBoxVertices(tr.result().pos(), builder, 1.0f, r, g, b, a);
+                BlockPos pos = tr.result().pos();
+                if (emitted.add(pos)) {
+                    emitBoxVertices(pos, builder, 1.0f, r, g, b, a);
+                }
                 for (BlockPos otherPos : tr.result().otherPositions()) {
-                    emitBoxVertices(otherPos, builder, 1.0f, r, g, b, a);
+                    if (emitted.add(otherPos)) {
+                        emitBoxVertices(otherPos, builder, 1.0f, r, g, b, a);
+                    }
                 }
             }
         } else if (!results.isEmpty()) {

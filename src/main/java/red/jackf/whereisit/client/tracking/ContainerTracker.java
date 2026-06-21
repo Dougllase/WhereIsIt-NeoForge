@@ -370,8 +370,11 @@ public class ContainerTracker {
         double rangeSq = (double) CLEANUP_SCAN_RANGE * (double) CLEANUP_SCAN_RANGE;
 
         for (Map.Entry<ResourceKey<Level>, Map<BlockPos, ContainerRecord>> dimEntry : RECORDS.entrySet()) {
-            // Only scan the dimension the player is currently in
-            if (dimEntry.getKey() != mc.level.dimension()) continue;
+            // Only scan the dimension the player is currently in.
+            // Use equals() rather than reference equality: while ResourceKey is normally interned via the
+            // ResourceKey pool, that contract is not guaranteed across all loading scenarios (e.g. cross-mod
+            // datapack reload) and reference comparison would silently skip cleanup if interning ever breaks.
+            if (!dimEntry.getKey().equals(mc.level.dimension())) continue;
 
             Map<BlockPos, ContainerRecord> dimRecords = dimEntry.getValue();
             if (dimRecords.isEmpty()) continue;
@@ -483,9 +486,16 @@ public class ContainerTracker {
         if (state == null && level != null) {
             state = level.getBlockState(pos);
         }
-        if (state != null && level != null) {
+        // Only canonicalize via ConnectedBlocksGrabber when the loaded level actually matches the
+        // dimension we are recording for. If the player switched dimensions between opening the
+        // container and the screen closing (e.g. portal teleport before the close packet was processed),
+        // querying block state from mc.level would resolve against the *wrong* world and corrupt the
+        // root-position calculation. Fall back to the raw position in that edge case.
+        if (state != null && level != null && dimension.equals(level.dimension())) {
             List<BlockPos> connected = ConnectedBlocksGrabber.getConnected(level, state, pos);
-            pos = connected.get(0); // root position (Chest Tracker pattern: connectedBlocks.get(0))
+            if (connected != null && !connected.isEmpty()) {
+                pos = connected.get(0); // root position (Chest Tracker pattern: connectedBlocks.get(0))
+            }
         }
 
         BlockPos finalPos = pos.immutable();

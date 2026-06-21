@@ -42,6 +42,12 @@ public class SearchRequest implements Consumer<Criterion> {
      * @return Whether this ItemStack or any sub-items if applicable matches the request
      */
     public static boolean check(ItemStack stack, SearchRequest request) {
+        // Empty / null guards: a request with no criteria would otherwise match every stack
+        // (because test() returns true for empty criteria) AND every nested item, which is
+        // catastrophic in tracking mode where check() is called every frame for every slot.
+        if (request == null || !request.hasCriteria()) return false;
+        if (stack == null || stack.isEmpty()) return false;
+
         if (request.test(stack)) return true;
 
         if (WhereIsItConfig.INSTANCE.instance().getCommon().doNestedSearch) {
