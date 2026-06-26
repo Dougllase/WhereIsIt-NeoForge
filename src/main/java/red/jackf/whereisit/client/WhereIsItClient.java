@@ -25,6 +25,7 @@ import red.jackf.whereisit.api.SearchResult;
 import red.jackf.whereisit.client.api.events.*;
 import red.jackf.whereisit.client.gui.ItemBrowserScreen;
 import red.jackf.whereisit.client.plugin.WhereIsItClientPluginLoader;
+import red.jackf.whereisit.client.contentscanner.BackgroundScanner;
 import red.jackf.whereisit.client.render.CurrentGradientHolder;
 import red.jackf.whereisit.client.tracking.ContainerTracker;
 import red.jackf.whereisit.client.tracking.TrackingState;
@@ -75,6 +76,7 @@ public class WhereIsItClient {
             clearResults();
             TrackingState.stopAll();
             ContainerTracker.onLeaveWorld();
+            BackgroundScanner.reset();
         }
         if (!inGame && connected) {
             ContainerTracker.onJoinWorld();
@@ -91,6 +93,10 @@ public class WhereIsItClient {
         // Periodic cleanup scan: removes records for containers that no longer exist
         // (destroyed, replaced, moved by pistons, etc.)
         ContainerTracker.tickCleanupScan();
+
+        // Background world scanner: periodically sends wildcard requests to discover
+        // all containers in loaded chunks and populate the ledger.
+        BackgroundScanner.tick();
 
         // Tracking owns results while active; bypass the fadeout timer + expiry cleanup.
         if (TrackingState.isTracking()) {
