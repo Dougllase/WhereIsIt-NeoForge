@@ -1,20 +1,15 @@
 package red.jackf.whereisit.client.contentscanner;
 
 import net.minecraft.client.Minecraft;
-import net.neoforged.neoforge.network.PacketDistributor;
 import red.jackf.whereisit.WhereIsIt;
-import red.jackf.whereisit.api.SearchRequest;
-import red.jackf.whereisit.network.C2SSearchRequest;
 
 /**
- * Periodically triggers server-side world scans to populate the client-side
- * {@link red.jackf.whereisit.client.inventory.InventoryLedger} with all containers
- * in loaded chunks.
+ * Periodically scans the client-side world to populate the
+ * {@link red.jackf.whereisit.client.inventory.InventoryLedger}.
  *
- * <p>Uses the same {@link C2SSearchRequest} packet with a wildcard (empty-criteria)
- * request, which matches every item. Results are delivered through the normal
- * {@code S2CSearchResults → NetworkSearchInvoker} pipeline and also merged into
- * the ledger.</p>
+ * <p>In the rewritten client-only architecture the server-side scan packet has been removed.
+ * The scanner is currently disabled; it will be replaced by a local chunk scan once the
+ * client-side container access API is in place.</p>
  */
 public final class BackgroundScanner {
     private BackgroundScanner() {}
@@ -22,12 +17,9 @@ public final class BackgroundScanner {
     /** Ticks between automatic world scans (20 ticks = 1 second). */
     private static final int SCAN_INTERVAL_TICKS = 200; // 10 seconds
 
-    private static boolean enabled = true;
+    private static boolean enabled = false; // disabled until local scan is implemented
     private static int tickCounter = 0;
     private static int scanCount = 0;
-
-    /** Empty-criteria wildcard — matches everything. */
-    private static final SearchRequest WILDCARD = new SearchRequest();
 
     /**
      * Called once per client tick from the top-level dispatcher.
@@ -43,9 +35,9 @@ public final class BackgroundScanner {
         var level = Minecraft.getInstance().level;
         if (level == null || Minecraft.getInstance().player == null) return;
 
-        PacketDistributor.sendToServer(new C2SSearchRequest(WILDCARD));
+        // TODO: implement local client-side chunk scan
         scanCount++;
-        WhereIsIt.LOGGER.debug("BackgroundScanner scan #{} sent", scanCount);
+        WhereIsIt.LOGGER.debug("BackgroundScanner local scan #{} skipped (not implemented)", scanCount);
     }
 
     /** Enable or disable background scanning at runtime. */
