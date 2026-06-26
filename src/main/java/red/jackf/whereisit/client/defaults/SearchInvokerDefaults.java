@@ -4,7 +4,7 @@ import net.minecraft.client.Minecraft;
 import red.jackf.whereisit.api.SearchRequest;
 import red.jackf.whereisit.api.SearchResult;
 import red.jackf.whereisit.client.api.events.SearchInvoker;
-import red.jackf.whereisit.client.tracking.ContainerRecord;
+import red.jackf.whereisit.client.data.ContainerRecord;
 import red.jackf.whereisit.client.tracking.ContainerTracker;
 
 import java.util.ArrayList;
@@ -23,9 +23,11 @@ public class SearchInvokerDefaults {
 
             Collection<SearchResult> found = new ArrayList<>();
             for (ContainerRecord record : ContainerTracker.getRecords(level.dimension())) {
-                for (var stack : record.contents()) {
+                var snapshot = record.snapshot();
+                if (snapshot == null || snapshot.isEmpty()) continue;
+                for (var stack : snapshot.stacks()) {
                     if (SearchRequest.check(stack, request)) {
-                        found.add(SearchResult.builder(record.pos()).item(stack).build());
+                        found.add(SearchResult.builder(record.key().pos()).item(stack).build());
                         break; // one match per container is enough for highlighting
                     }
                 }

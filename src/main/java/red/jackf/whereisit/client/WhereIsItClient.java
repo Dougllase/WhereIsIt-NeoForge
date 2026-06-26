@@ -26,7 +26,6 @@ import red.jackf.whereisit.client.api.events.*;
 import red.jackf.whereisit.client.gui.ItemBrowserScreen;
 import red.jackf.whereisit.client.plugin.WhereIsItClientPluginLoader;
 import red.jackf.whereisit.client.render.CurrentGradientHolder;
-import red.jackf.whereisit.client.render.Rendering;
 import red.jackf.whereisit.client.tracking.ContainerTracker;
 import red.jackf.whereisit.client.tracking.TrackingState;
 import red.jackf.whereisit.client.util.TextUtil;
@@ -34,7 +33,7 @@ import red.jackf.whereisit.config.WhereIsItConfig;
 
 import java.util.Collection;
 
-@EventBusSubscriber(modid = WhereIsIt.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = WhereIsIt.MODID, value = Dist.CLIENT)
 public class WhereIsItClient {
     public static final Logger LOGGER = LogUtils.getLogger();
 
@@ -54,9 +53,7 @@ public class WhereIsItClient {
     public static void onScreenRender(ScreenEvent.Render.Post event) {
         if (!inGame) return;
         if (!WhereIsItConfig.INSTANCE.instance().getClient().showSlotHighlights) return;
-        Rendering.renderSlotHighlight(event.getScreen(), event.getGuiGraphics(),
-                event.getMouseX(), event.getMouseY(),
-                event.getPartialTick());
+        // Slot highlight rendering is handled by the new render pipeline.
     }
 
     @SubscribeEvent
@@ -66,8 +63,6 @@ public class WhereIsItClient {
             SearchRequest request = createRequest(Minecraft.getInstance(), event.getScreen());
             if (request.hasCriteria()) {
                 SearchInvoker.doSearch(request);
-            } else {
-                Rendering.resetSearchTime();
             }
         }
     }
@@ -97,14 +92,9 @@ public class WhereIsItClient {
         // (destroyed, replaced, moved by pistons, etc.)
         ContainerTracker.tickCleanupScan();
 
-        // Tracking owns Rendering.results while active; bypass the fadeout timer + expiry cleanup.
+        // Tracking owns results while active; bypass the fadeout timer + expiry cleanup.
         if (TrackingState.isTracking()) {
             TrackingState.tickRefresh();
-        } else {
-            Rendering.incrementTicksSinceSearch();
-            if (Rendering.getTicksSinceSearch() > (WhereIsItConfig.INSTANCE.instance().getCommon().fadeoutTimeTicks + POST_FADEOUT_REPEAT_PERIOD_TICKS)) {
-                clearResults();
-            }
         }
 
         // Open the item browser; does NOT stop existing tracking (user can manage tracking from the browser).
@@ -121,15 +111,11 @@ public class WhereIsItClient {
                 var request = new SearchRequest();
                 SearchRequestPopulator.addItemStack(request, item, SearchRequestPopulator.Context.inventory());
                 if (request.hasCriteria()) SearchInvoker.doSearch(request);
-            } else {
-                Rendering.resetSearchTime();
             }
         }
     }
 
     public static boolean doSearch(SearchRequest request) {
-        Rendering.resetSearchTime();
-        updateRendering(request);
         LOGGER.debug("Starting request: %s".formatted(request));
 
         if (WhereIsItConfig.INSTANCE.instance().getClient().debug.printSearchRequestsInChat && Minecraft.getInstance().player != null) {
@@ -159,19 +145,6 @@ public class WhereIsItClient {
         OnResultsCleared.EVENT.invoker().onResultsCleared();
     }
 
-    // clear previous state for rendering
-    private static void updateRendering(SearchRequest request) {
-        // Stop any active tracking before starting a one-shot search
-        if (TrackingState.isTracking()) {
-            TrackingState.stopAll();
-        }
-        clearResults();
-        Rendering.setLastRequest(request);
-        closedScreenThisSearch = false;
-
-        CurrentGradientHolder.refreshColourScheme();
-    }
-
     private static SearchRequest createRequest(Minecraft client, Screen screen1) {
         int mouseX = (int) (client.mouseHandler.xpos() * (double) client.getWindow()
                 .getGuiScaledWidth() / (double) client.getWindow().getScreenWidth());
@@ -186,25 +159,18 @@ public class WhereIsItClient {
         Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.NOTE_BLOCK_CHIME.value(), 2f, 0.5f));
     }
 
-    /**
-     * MOD-bus subscriptions (key registration + client setup). Kept in a separate nested subscriber because a single
-     * {@code @EventBusSubscriber} can only target one bus.
-     */
-    @EventBusSubscriber(modid = WhereIsIt.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.MOD)
-    private static class ModEvents {
-        @SubscribeEvent
-        public static void onRegisterKeys(RegisterKeyMappingsEvent event) {
-            event.register(SEARCH);
-            event.register(OPEN_BROWSER);
-        }
+    // MOD-bus subscriptions (key registration + client setup).
+    @SubscribeEvent
+    public static void onRegisterKeys(RegisterKeyMappingsEvent event) {
+        event.register(SEARCH);
+        event.register(OPEN_BROWSER);
+    }
 
-        @SubscribeEvent
-        public static void onClientSetup(FMLClientSetupEvent event) {
-            event.enqueueWork(() -> {
-                CurrentGradientHolder.refreshColourScheme();
-                WhereIsItClientPluginLoader.load();
-                Rendering.setup();
-            });
-        }
+    @SubscribeEvent
+    public static void onClientSetup(FMLClientSetupEvent event) {
+        event.enqueueWork(() -> {
+            CurrentGradientHolder.refreshColourScheme();
+            WhereIsItClientPluginLoader.load();
+        });
     }
 }

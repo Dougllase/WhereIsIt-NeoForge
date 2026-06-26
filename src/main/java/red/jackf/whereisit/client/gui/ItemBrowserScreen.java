@@ -8,9 +8,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import red.jackf.whereisit.client.compat.LitematicaBridge;
+import red.jackf.whereisit.client.data.ItemEntry;
 import red.jackf.whereisit.client.tracking.ContainerTracker;
 import red.jackf.whereisit.client.tracking.ItemAggregator;
-import red.jackf.whereisit.client.tracking.ItemEntry;
 import red.jackf.whereisit.client.tracking.TrackingState;
 import red.jackf.whereisit.config.WhereIsItConfig;
 

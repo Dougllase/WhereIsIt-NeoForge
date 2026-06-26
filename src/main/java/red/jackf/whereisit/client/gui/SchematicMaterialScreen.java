@@ -7,8 +7,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import red.jackf.whereisit.client.compat.LitematicaBridge;
+import red.jackf.whereisit.client.data.ContainerRecord;
 import red.jackf.whereisit.client.tracking.ContainerTracker;
-import red.jackf.whereisit.client.tracking.ContainerRecord;
 import red.jackf.whereisit.client.tracking.TrackingState;
 
 import java.text.Collator;
@@ -113,7 +113,9 @@ public class SchematicMaterialScreen extends Screen {
         var level = this.minecraft.level;
         if (level != null) {
             for (ContainerRecord record : ContainerTracker.getRecords(level.dimension())) {
-                for (ItemStack stack : record.contents()) {
+                var snapshot = record.snapshot();
+                if (snapshot == null || snapshot.isEmpty()) continue;
+                for (ItemStack stack : snapshot.stacks()) {
                     if (!stack.isEmpty()) {
                         storedCounts.merge(stack.getItem(), stack.getCount(), Integer::sum);
                     }

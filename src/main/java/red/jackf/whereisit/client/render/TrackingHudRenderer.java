@@ -9,8 +9,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderGuiEvent;
 import red.jackf.whereisit.WhereIsIt;
+import red.jackf.whereisit.client.data.ItemEntry;
 import red.jackf.whereisit.client.tracking.ItemAggregator;
-import red.jackf.whereisit.client.tracking.ItemEntry;
 import red.jackf.whereisit.client.tracking.TrackingState;
 import red.jackf.whereisit.config.WhereIsItConfig;
 
@@ -22,7 +22,7 @@ import java.util.Map;
  * Renders a tracking HUD overlay in the top-right corner (above the scoreboard sidebar),
  * showing all currently tracked items with their collection progress.
  */
-@EventBusSubscriber(modid = WhereIsIt.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = WhereIsIt.MODID, value = Dist.CLIENT)
 public class TrackingHudRenderer {
 
     private static final int LINE_HEIGHT = 20;

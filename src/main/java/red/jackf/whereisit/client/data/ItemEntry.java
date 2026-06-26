@@ -7,42 +7,37 @@ import java.util.Objects;
 
 /**
  * Immutable summary of an item stack seen in inventory.
- * Stores a representative ItemStack plus an aggregated count across one or more containers.
- *
- * Equality is by item identity + components patch; count is informational.
+ * Stores a representative ItemStack plus aggregated count, container count, source mod,
+ * and collection tracking data.
  */
-public record ItemEntry(ItemStack representative, int count) {
+public record ItemEntry(
+        ItemStack sample,
+        int totalItems,
+        int containerCount,
+        String sourceModName,
+        int collectedCount,
+        int collectedContainers
+) {
     public ItemEntry {
-        Objects.requireNonNull(representative, "representative");
-        if (representative.isEmpty()) {
+        Objects.requireNonNull(sample, "sample");
+        if (sample.isEmpty()) {
             throw new IllegalArgumentException("ItemEntry cannot wrap an empty stack");
         }
-        if (count < 0) {
-            count = 0;
+        if (totalItems < 0) totalItems = 0;
+        if (containerCount < 0) containerCount = 0;
+        if (collectedCount < 0) collectedCount = 0;
+        if (collectedContainers < 0) collectedContainers = 0;
+        if (sourceModName == null || sourceModName.isEmpty()) {
+            sourceModName = "Unknown";
         }
     }
 
-    public static ItemEntry of(ItemStack stack) {
-        return new ItemEntry(stack.copy(), stack.getCount());
+    /** Convenience constructor with zero collection data. */
+    public ItemEntry(ItemStack sample, int totalItems, int containerCount, String sourceModName) {
+        this(sample, totalItems, containerCount, sourceModName, 0, 0);
     }
 
     public Item item() {
-        return representative.getItem();
-    }
-
-    /**
-     * Returns a new ItemEntry with the count increased by the given amount.
-     */
-    public ItemEntry plus(int extra) {
-        return new ItemEntry(representative, count + extra);
-    }
-
-    /**
-     * Returns a fresh, mutable copy of the representative stack with the aggregated count.
-     */
-    public ItemStack toDisplayStack() {
-        ItemStack copy = representative.copy();
-        copy.setCount(Math.max(1, count));
-        return copy;
+        return sample.getItem();
     }
 }

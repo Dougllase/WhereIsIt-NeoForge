@@ -45,7 +45,7 @@ import java.util.List;
  * <p>Tick-driven safety net handles screens that close without firing the event (death,
  * server kick, dimension change).</p>
  */
-@EventBusSubscriber(modid = WhereIsIt.MODID, value = Dist.CLIENT, bus = EventBusSubscriber.Bus.GAME)
+@EventBusSubscriber(modid = WhereIsIt.MODID, value = Dist.CLIENT)
 public final class ContainerObserver {
     private ContainerObserver() {}
 
