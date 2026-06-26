@@ -1,10 +1,12 @@
 package red.jackf.whereisit.client.tracking;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceKey;
 import red.jackf.whereisit.client.data.ContainerRecord;
 import red.jackf.whereisit.client.inventory.ContainerObserver;
 import red.jackf.whereisit.client.inventory.InventoryLedger;
 import red.jackf.whereisit.client.inventory.LedgerCleanup;
+import red.jackf.whereisit.client.persistence.LedgerStorage;
 
 import java.util.Collection;
 
@@ -19,11 +21,22 @@ public final class ContainerTracker {
         return InventoryLedger.get().recordsIn(dimension);
     }
 
+    static {
+        InventoryLedger.get().setOnChange(LedgerStorage::markDirty);
+    }
+
     public static void onJoinWorld() {
-        // No-op: new architecture handles this internally.
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null) {
+            LedgerStorage.load(mc.level.registryAccess());
+        }
     }
 
     public static void onLeaveWorld() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null) {
+            LedgerStorage.save(mc.level.registryAccess());
+        }
         InventoryLedger.get().clearAll();
         ContainerObserver.reset();
         LedgerCleanup.reset();
@@ -31,7 +44,10 @@ public final class ContainerTracker {
     }
 
     public static void tickAutosave() {
-        // No-op: new architecture does not yet implement persistence.
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null && LedgerStorage.isDirty()) {
+            LedgerStorage.save(mc.level.registryAccess());
+        }
     }
 
     public static void tick() {
@@ -47,6 +63,9 @@ public final class ContainerTracker {
     }
 
     public static void saveIfDirty() {
-        // No-op: new architecture does not yet implement persistence.
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level != null) {
+            LedgerStorage.save(mc.level.registryAccess());
+        }
     }
 }

@@ -38,6 +38,7 @@ public final class InventoryLedger {
     }
 
     private final Map<ResourceKey<Level>, Map<BlockPos, ContainerRecord>> byDimension = new ConcurrentHashMap<>();
+    private volatile Runnable onChange = () -> {};
 
     private InventoryLedger() {}
 
@@ -51,6 +52,10 @@ public final class InventoryLedger {
      * @param tick      client tick at recording time
      * @return the new (immutable) record
      */
+    public void setOnChange(Runnable onChange) {
+        this.onChange = onChange == null ? () -> {} : onChange;
+    }
+
     public ContainerRecord record(WorldCoordinate key,
                                   List<WorldCoordinate> connected,
                                   InventorySnapshot snapshot,
@@ -60,6 +65,7 @@ public final class InventoryLedger {
         byDimension
                 .computeIfAbsent(key.dimension(), d -> new ConcurrentHashMap<>())
                 .put(key.pos(), record);
+        onChange.run();
         WhereIsIt.LOGGER.debug("InventoryLedger.record dim={} pos={} items={}",
                 key.dimension().location(), key.pos(), snapshot.size());
         return record;
@@ -72,7 +78,10 @@ public final class InventoryLedger {
         Map<BlockPos, ContainerRecord> dim = byDimension.get(key.dimension());
         if (dim == null) return null;
         ContainerRecord removed = dim.remove(key.pos());
-        if (dim.isEmpty()) byDimension.remove(key.dimension());
+        if (removed != null) {
+            if (dim.isEmpty()) byDimension.remove(key.dimension());
+            onChange.run();
+        }
         return removed;
     }
 
@@ -86,13 +95,19 @@ public final class InventoryLedger {
         for (BlockPos pos : dim.keySet()) {
             if (predicate.test(pos)) doomed.add(pos);
         }
-        for (BlockPos pos : doomed) dim.remove(pos);
-        if (dim.isEmpty()) byDimension.remove(dimension);
+        if (!doomed.isEmpty()) {
+            for (BlockPos pos : doomed) dim.remove(pos);
+            if (dim.isEmpty()) byDimension.remove(dimension);
+            onChange.run();
+        }
         return doomed.size();
     }
 
     public void clearAll() {
-        byDimension.clear();
+        if (!byDimension.isEmpty()) {
+            byDimension.clear();
+            onChange.run();
+        }
         WhereIsIt.LOGGER.debug("InventoryLedger.clearAll");
     }
 
