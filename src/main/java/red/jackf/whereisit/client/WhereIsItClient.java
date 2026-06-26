@@ -51,13 +51,6 @@ public class WhereIsItClient {
     public static boolean closedScreenThisSearch = false;
 
     @SubscribeEvent
-    public static void onScreenRender(ScreenEvent.Render.Post event) {
-        if (!inGame) return;
-        if (!WhereIsItConfig.INSTANCE.instance().getClient().showSlotHighlights) return;
-        // Slot highlight rendering is handled by the new render pipeline.
-    }
-
-    @SubscribeEvent
     public static void onScreenKey(ScreenEvent.KeyPressed.Post event) {
         if (!inGame) return;
         if (SEARCH.matches(event.getKeyCode(), event.getScanCode()) && !ShouldIgnoreKey.EVENT.invoker().shouldIgnoreKey()) {
@@ -103,8 +96,10 @@ public class WhereIsItClient {
             TrackingState.tickRefresh();
         }
 
-        // Open the item browser; does NOT stop existing tracking (user can manage tracking from the browser).
+        // Open the item browser. Per the desired UX, opening the browser automatically stops
+        // any active tracking before presenting the item grid.
         if (Minecraft.getInstance().screen == null && OPEN_BROWSER.consumeClick()) {
+            TrackingState.stopAll();
             Minecraft.getInstance().setScreen(new ItemBrowserScreen());
         }
 
